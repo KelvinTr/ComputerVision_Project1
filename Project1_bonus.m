@@ -41,7 +41,7 @@ end
 
 % Projection Matrix Construction
 m=V(:,min_index);
-M = reshape(m,4,3)';
+M = reshape(m,4,3)'
 
 %% Variables to Calculate Intrinsic and Extrinsic Parameters
 A = M(1:3, 1:3);
@@ -51,15 +51,15 @@ a2 = A(2,:);
 a3 = A(3,:);
 
 % Intrinsic Parameters - u0, v0, theta, alpha, beta
-rho = 1/norm(a3, 1);
+rho = 1/norm(a3);
 num = -(dot(cross(a1,a3), cross(a2,a3)));
-den = norm(cross(a1,a3),1)*norm(cross(a2,a3),1);
+den = norm(cross(a1,a3))*norm(cross(a2,a3));
 
 u0 = rho*rho*dot(a1,a3)                             % u0
 v0 = rho*rho*dot(a2,a3)                             % v0
 theta = acos(num/den)                               % theta
-alpha = rho*rho*norm(cross(a1,a3),1)*sin(theta)     % alpha
-beta = rho*rho*norm(cross(a2,a3),1)*sin(theta)      % beta
+alpha = rho*rho*norm(cross(a1,a3))*sin(theta)     % alpha
+beta = rho*rho*norm(cross(a2,a3))*sin(theta)      % beta
 
 % Extrinsic Parameters - Rotation Matrix, and Shift Matrix
 r1 = cross(a2,a3)/norm(cross(a2,a3));
@@ -68,13 +68,15 @@ r2 = cross(r3, r1);
 
 R = [r1;r2;r3]                                      % Rotation Matrix
 
-K = [alpha, -1*alpha*cot(theta), u0; 0, beta/sin(theta), v0; 0, 0, 1]';
-t = rho*K\b                                         % Shift Matrix
+K = [-alpha, -1*alpha*cot(theta), u0; 0, beta/sin(theta), v0; 0, 0, 1];
+t = rho*inv(K)*b                                    % Shift Matrix
+
+M_estimated = [K*R K*t]/rho
 
 %% Calculate Points with Estimated Projection Matrix and Parameters
 for z=1:9      %{x,10,z|x,z=0,…,10}
     for y=1:9
-        point = [(M*[0, y-1, z-1, 1]')];
+        point = [(M_estimated*[0, y-1, z-1, 1]')];
         point = round((point/point(3,:))');
         if y==1 && z==1
             p2 = point(:,1:2);
@@ -86,7 +88,7 @@ end
 
 for x=1:9      %{10,y,z|y,z=0,…,10}
     for z=1:9
-        point = [(M*[x-1, 0, z-1, 1]')];
+        point = [(M_estimated*[x-1, 0, z-1, 1]')];
         point = round((point/point(3,:))');
         if z==1 && x==1
             p3 = point(:,1:2);
@@ -115,7 +117,7 @@ for i=1:size(p2,1)          %{10,y,z|y,z=0,…,10}
         end
     end
 end
-%figure(1), imshow(I1)
+figure(1), imshow(I1)
 
 %% Video - Moving 3D Object
 vidObj = VideoWriter("3D_Movement_Bonus.avi");
@@ -125,7 +127,7 @@ for k=1:740
     % Estimate 2D coordinate for current 3D position
     for c=1:size(cube_pos,1)
         pos_increment = [cube_pos(c,:), 1];
-        new_pos = [(M*pos_increment')];
+        new_pos = [(M_estimated*pos_increment')];
         new_pos = round((new_pos/new_pos(3,:))');
         if c==1
             new_pos_2d = [new_pos(:,1:2)];
